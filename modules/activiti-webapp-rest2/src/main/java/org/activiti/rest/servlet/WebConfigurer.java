@@ -52,7 +52,7 @@ public class WebConfigurer implements ServletContextListener {
     EnumSet<DispatcherType> disps = EnumSet.of(DispatcherType.REQUEST, DispatcherType.FORWARD, DispatcherType.ASYNC);
 
     initSpring(servletContext, rootContext);
-    initSpringSecurity(servletContext, disps);
+//  initSpringSecurity(servletContext, disps);
 
     log.debug("Web application fully configured");
   }
