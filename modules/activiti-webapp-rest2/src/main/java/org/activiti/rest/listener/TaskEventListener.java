@@ -2,15 +2,20 @@ package org.activiti.rest.listener;
 
 import java.io.InputStream;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.activiti.engine.RuntimeService;
 import org.activiti.engine.delegate.event.ActivitiEntityEvent;
 import org.activiti.engine.delegate.event.ActivitiEvent;
 import org.activiti.engine.delegate.event.ActivitiEventListener;
 import org.activiti.engine.delegate.event.ActivitiEventType;
+import org.activiti.engine.impl.persistence.entity.IdentityLinkEntity;
 import org.activiti.engine.impl.persistence.entity.TaskEntity;
+import org.activiti.engine.task.IdentityLink;
+import org.activiti.engine.task.IdentityLinkType;
 import org.activiti.engine.task.Task;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
@@ -78,6 +83,7 @@ public class TaskEventListener implements ActivitiEventListener {
 	private Map<String, Object> createSearchVariables(TaskEntity taskEntity) {
 		Map<String, Object> searchVariables = taskEntity.getVariables();
 		searchVariables.put("id", taskEntity.getId());
+		searchVariables.put("entity_id", taskEntity.getId());
 		searchVariables.put("entity_type", searchVariables.get(indexName));
 		searchVariables.put("index_time", new Date());
 		searchVariables.put("TaskDefinitionKey", taskEntity.getTaskDefinitionKey());
@@ -90,6 +96,13 @@ public class TaskEventListener implements ActivitiEventListener {
 		searchVariables.put("TaskPrioriry", taskEntity.getPriority());
 		searchVariables.put("TaskDescription", taskEntity.getDescription());
 		searchVariables.put("AssignBy", taskEntity.getOwner());
+		
+	    for (IdentityLink identityLink : taskEntity.getCandidates()) {
+	      if (IdentityLinkType.CANDIDATE.equals(identityLink.getType())) {
+	    	  searchVariables.put("Candidates", identityLink.getGroupId());
+	      }
+	    }
+		
 		return searchVariables;
 	}
 
