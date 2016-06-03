@@ -18,6 +18,7 @@ import org.activiti.engine.task.IdentityLink;
 import org.activiti.engine.task.IdentityLinkType;
 import org.activiti.engine.task.Task;
 import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
@@ -41,12 +42,18 @@ public class TaskEventListener implements ActivitiEventListener {
 
 	public static String solr_url = null;
 
+	public static String zoo_keeper_url = null;
+
+	public static String solr_client_type = null;
+
 	static {
 		try {
 			prop = new Properties();
 			InputStream in = TaskEventListener.class.getClassLoader().getResourceAsStream("engine.properties");
 			prop.load(in);
 			solr_url = prop.getProperty("engine.search.url");
+			zoo_keeper_url = prop.getProperty("search.solr.zoo.keeper.url");
+			solr_client_type = prop.getProperty("search.solr.client.type");
 		} catch (Throwable ex) {
 			throw new RuntimeException(ex);
 		}
@@ -96,13 +103,13 @@ public class TaskEventListener implements ActivitiEventListener {
 		searchVariables.put("TaskPrioriry", taskEntity.getPriority());
 		searchVariables.put("TaskDescription", taskEntity.getDescription());
 		searchVariables.put("AssignBy", taskEntity.getOwner());
-		
-	    for (IdentityLink identityLink : taskEntity.getCandidates()) {
-	      if (IdentityLinkType.CANDIDATE.equals(identityLink.getType())) {
-	    	  searchVariables.put("Candidates", identityLink.getGroupId());
-	      }
-	    }
-		
+
+		for (IdentityLink identityLink : taskEntity.getCandidates()) {
+			if (IdentityLinkType.CANDIDATE.equals(identityLink.getType())) {
+				searchVariables.put("Candidates", identityLink.getGroupId());
+			}
+		}
+
 		return searchVariables;
 	}
 
@@ -113,7 +120,17 @@ public class TaskEventListener implements ActivitiEventListener {
 			String fieldName = (String) obj;
 			doc.addField(fieldName, searchVariables.get(fieldName));
 		}
-		SolrClient client = new HttpSolrClient(solr_url + schemaName);
+
+		SolrClient client = null;
+		if ("cloudSolrClient".equals(solr_client_type)) {
+			client = new CloudSolrClient(zoo_keeper_url);
+			((CloudSolrClient) client).setZkClientTimeout(5000);
+			((CloudSolrClient) client).setZkConnectTimeout(5000);
+			((CloudSolrClient) client).setDefaultCollection(schemaName);
+
+		} else {
+			client = new HttpSolrClient(solr_url + schemaName);
+		}
 		// SolrClient client = new
 		// HttpSolrClient("http://172.25.17.213:8983/solr/" + schemaName);
 		try {
@@ -128,7 +145,18 @@ public class TaskEventListener implements ActivitiEventListener {
 
 	private void removeIndex(String taskId, String indexName) {
 		String query = "entity_type" + ":" + indexName + " AND " + "id" + ":" + taskId;
-		SolrClient client = new HttpSolrClient(solr_url + schemaName);
+
+		// SolrClient client = new HttpSolrClient(solr_url + schemaName);
+		SolrClient client = null;
+		if ("cloudSolrClient".equals(solr_client_type)) {
+			client = new CloudSolrClient(zoo_keeper_url);
+			((CloudSolrClient) client).setZkClientTimeout(5000);
+			((CloudSolrClient) client).setZkConnectTimeout(5000);
+			((CloudSolrClient) client).setDefaultCollection(schemaName);
+
+		} else {
+			client = new HttpSolrClient(solr_url + schemaName);
+		}
 		try {
 			client.deleteByQuery(query);
 		} catch (Exception e) {
