@@ -52,7 +52,7 @@ public class TaskEventListener implements ActivitiEventListener {
 			InputStream in = TaskEventListener.class.getClassLoader().getResourceAsStream("engine.properties");
 			prop.load(in);
 			solr_url = prop.getProperty("engine.search.url");
-			zoo_keeper_url = prop.getProperty("search.solr.zoo.keeper.url");
+			zoo_keeper_url = prop.getProperty("search.solr.zoo_keeper.url");
 			solr_client_type = prop.getProperty("search.solr.client.type");
 		} catch (Throwable ex) {
 			throw new RuntimeException(ex);
@@ -139,6 +139,8 @@ public class TaskEventListener implements ActivitiEventListener {
 			e.printStackTrace();
 			logger.error("add solr docs failure", e);
 			throw new RuntimeException("add solr docs failure");
+		}finally{
+			client.shutdown();
 		}
 
 	}
@@ -162,6 +164,8 @@ public class TaskEventListener implements ActivitiEventListener {
 		} catch (Exception e) {
 			logger.error("Error when clear index data.", e);
 			throw new RuntimeException("remove solr docs failure");
+		}finally{
+			client.shutdown();
 		}
 
 	}
